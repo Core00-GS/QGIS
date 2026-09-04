@@ -19,6 +19,7 @@
 #include "qgis.h"
 #include "qgis_gui.h"
 #include "qgsprocessingcontext.h"
+#include "qgsprocessingwidgetcontext.h"
 
 #include <QFont>
 #include <QGraphicsObject>
@@ -37,6 +38,7 @@ class QgsModelDesignerSocketGraphicItem;
 class QgsModelGraphicsView;
 class QgsModelViewMouseEvent;
 class QgsProcessingModelGroupBox;
+class QgsModelArrowItem;
 
 ///@cond NOT_STABLE
 
@@ -46,7 +48,7 @@ class QgsProcessingModelGroupBox;
  * \warning Not stable API
  * \since QGIS 3.14
  */
-class GUI_EXPORT QgsModelComponentGraphicItem : public QGraphicsObject
+class GUI_EXPORT QgsModelComponentGraphicItem : public QGraphicsObject, public QgsProcessingWidgetContextGenerator
 {
     Q_OBJECT
 
@@ -271,6 +273,31 @@ class GUI_EXPORT QgsModelComponentGraphicItem : public QGraphicsObject
      */
     virtual void deleteComponent() {}
 
+    /**
+     * Returns the list of incoming arrow items terminating at this item.
+     *
+     * \see outgoingArrows()
+     * \since QGIS 4.2
+     */
+    QList< QgsModelArrowItem * > incomingArrows();
+
+    /**
+     * Returns the list of outgoing arrow items originating at this item.
+     *
+     * \see incomingArrows()
+     * \since QGIS 4.2
+     */
+    QList< QgsModelArrowItem * > outgoingArrows();
+
+    /**
+     * Register a Processing widget context generator class that will be used to retrieve
+     * a widget context for the item when required.
+     * \since QGIS 4.4
+     */
+    void registerWidgetContextGenerator( QgsProcessingWidgetContextGenerator *generator );
+
+    QgsProcessingParameterWidgetContext createWidgetContext() override;
+
   signals:
 
     // TODO - rework this, should be triggered externally when the model actually changes!
@@ -321,6 +348,18 @@ class GUI_EXPORT QgsModelComponentGraphicItem : public QGraphicsObject
 
   protected:
     /**
+     * Paints the background part of the graphic item.
+     *
+     * Subclasses may override this to customize the background appearance.
+     */
+    virtual void paintBackground( QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr );
+
+    /**
+     * Paints the outline part of the graphic item.
+     */
+    void paintOutline( QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr );
+
+    /**
      * Truncates a \a text string so that it fits nicely within the item's width,
      * accounting for margins and interactive buttons.
      */
@@ -345,6 +384,13 @@ class GUI_EXPORT QgsModelComponentGraphicItem : public QGraphicsObject
      * Returns the stroke style to use while rendering the outline of the item.
      */
     virtual Qt::PenStyle strokeStyle( State state ) const;
+
+    /**
+     * Returns the optional color for an outline effect around the item.
+     *
+     * Returns an invalid color if the outline effect is not required.
+     */
+    virtual QColor outlineColor() const { return QColor(); }
 
     /**
      * Returns the title alignment
@@ -400,6 +446,7 @@ class GUI_EXPORT QgsModelComponentGraphicItem : public QGraphicsObject
     QList< QgsModelDesignerSocketGraphicItem * > mInSockets;
     QList< QgsModelDesignerSocketGraphicItem * > mOutSockets;
 
+    QgsProcessingWidgetContextGenerator *mWidgetContextGenerator = nullptr;
 
     static constexpr double MIN_COMPONENT_WIDTH = 70;
     static constexpr double MIN_COMPONENT_HEIGHT = 30;
@@ -409,6 +456,7 @@ class GUI_EXPORT QgsModelComponentGraphicItem : public QGraphicsObject
     static constexpr double BUTTON_MARGIN = 2;
     static constexpr double TEXT_MARGIN = 4;
     static constexpr double RECT_PEN_SIZE = 2;
+    static constexpr double RECT_OUTLINE_SIZE = 10;
     QSizeF mButtonSize { DEFAULT_BUTTON_WIDTH, DEFAULT_BUTTON_HEIGHT };
 
     QFont mFont;
@@ -462,10 +510,11 @@ class GUI_EXPORT QgsModelParameterGraphicItem : public QgsModelComponentGraphicI
     QPicture mPicture;
 };
 
+#ifndef SIP_RUN
 /**
  * \ingroup gui
  * \brief A graphic item representing a child algorithm in the model designer.
- * \warning Not stable API
+ * \warning Not available in Python bindings
  * \since QGIS 3.14
  */
 class GUI_EXPORT QgsModelChildAlgorithmGraphicItem : public QgsModelComponentGraphicItem
@@ -491,12 +540,74 @@ class GUI_EXPORT QgsModelChildAlgorithmGraphicItem : public QgsModelComponentGra
     void setResults( const QgsProcessingModelChildAlgorithmResult &results );
 
     /**
+     * Sets the feature count for the source attached to the specified input.
+     *
+     * This can be used to dynamically update the feature count badge for the matching arrow item.
+     *
+     * \since QGIS 4.2
+     */
+    void setSourceFeatureCount( const QString &parameterName, long long featureCount );
+
+    /**
+     * Sets the feature count for the sink attached to the specified output.
+     *
+     * This can be used to dynamically update the feature count badge for the matching arrow item.
+     *
+     * \since QGIS 4.2
+     */
+    void setSinkFeatureCount( const QString &outputName, long long featureCount );
+
+    /**
      * Returns the \a results for this child algorithm for the last model execution through the dialog.
      *
      * \since QGIS 4.0
      */
     QgsProcessingModelChildAlgorithmResult results() { return mResults; };
 
+    /**
+     * Sets the child's \a progress.
+     */
+    void setProgress( double progress );
+
+    /**
+     * Flags the algorithm as having started.
+     *
+     * \since QGIS 4.2
+     */
+    void setStarted();
+
+    /**
+     * Flags the algorithm as possibly being outdated (i.e. previous results are invalid due to changes elsewhere in the model).
+     *
+     * \since QGIS 4.2
+     */
+    void setOutdated();
+
+    /**
+     * Returns the index for the input with the specified parameter name, or -1 if the parameter could not be matched.
+     *
+     * \see indexForOutput()
+     * \since QGIS 4.2
+     */
+    int indexForInput( const QString &parameterName ) const;
+
+    /**
+     * Returns the index for the output with the specified name, or -1 if the output could not be matched.
+     *
+     * \see indexForInput()
+     * \since QGIS 4.2
+     */
+    int indexForOutput( const QString &output ) const;
+
+    void editComponent() override;
+    void editComment() override;
+
+    /**
+     * Applies edits to the item, using an updated child \a algorithm definition.
+     *
+     * \since QGIS 4.4
+     */
+    void applyEdit( const QgsProcessingModelChildAlgorithm &algorithm );
 
   signals:
 
@@ -528,10 +639,21 @@ class GUI_EXPORT QgsModelChildAlgorithmGraphicItem : public QgsModelComponentGra
     */
     void showLog();
 
+    /**
+     * Requests that any associated configuration dock widget is rebuilt to reflect the
+     * current state of the child algorithm.
+     *
+     * \since QGIS 4.2
+     */
+    void rebuildConfigurationDockWidget();
+
   protected:
+    void paintBackground( QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr ) override;
+
     QColor fillColor( State state ) const override;
     QColor strokeColor( State state ) const override;
     QColor textColor( State state ) const override;
+    QColor outlineColor() const override;
     QPixmap iconPixmap() const override;
     QPicture iconPicture() const override;
 
@@ -548,12 +670,22 @@ class GUI_EXPORT QgsModelChildAlgorithmGraphicItem : public QgsModelComponentGra
     void activateAlgorithm();
 
   private:
+    /**
+     * Opens the dialog to edit the child algorithm parameters or comments.
+     *
+     * \param editComment set to TRUE to focus the comments tab
+     */
+    void edit( bool editComment = false );
+
     QPicture mPicture;
     QPixmap mPixmap;
+    bool mStarted = false;
+    bool mOutdated = false;
     QgsProcessingModelChildAlgorithmResult mResults;
+    double mProgress = -1;
     bool mIsValid = true;
 };
-
+#endif
 
 /**
  * \ingroup gui
@@ -593,7 +725,7 @@ class GUI_EXPORT QgsModelOutputGraphicItem : public QgsModelComponentGraphicItem
     QPicture mPicture;
 };
 
-
+#ifndef SIP_RUN
 /**
  * \ingroup gui
  * \brief A graphic item representing a model comment in the model designer.
@@ -641,7 +773,7 @@ class GUI_EXPORT QgsModelCommentGraphicItem : public QgsModelComponentGraphicIte
     std::unique_ptr<QgsProcessingModelComponent> mParentComponent;
     QPointer<QgsModelComponentGraphicItem> mParentItem;
 };
-
+#endif
 
 /**
  * \ingroup gui

@@ -2,13 +2,13 @@
   "vcpkg-configuration": {
     "default-registry": {
       "kind": "git",
-      "baseline": "0b88aacde46a853151730fbe7d0b7ee45f4b6864",
+      "baseline": "30ef65cad98f08e7197c9a1656fbd871bcb72f2d",
       "repository": "https://github.com/microsoft/vcpkg"
     },
     "registries": [
       {
         "kind": "git",
-        "baseline": "23c5891f6ae43aa2dcb872509e38b5448969e2ec",
+        "baseline": "269dafd954dcd210530007d26af098368dc18c0b",
         "repository": "https://github.com/open-vcpkg/python-registry",
         "packages": [
           "arrow",
@@ -89,7 +89,10 @@
     {
       "name": "qtbase",
       "default-features": false,
-      "host": true
+      "host": true,
+      "features": [
+        "thread"
+      ]
     },
     {
       "name": "qtmultimedia",
@@ -103,6 +106,15 @@
     "qtsvg",
     "qt5compat",
     "qtkeychain-qt6",
+    {
+      "name": "tiff",
+      "features": [
+        "lerc",
+        "libdeflate",
+        "webp",
+        "zstd"
+      ]
+    },
     "zlib",
     "zstd"
   ],
@@ -177,6 +189,7 @@
         },
         "py-lxml",
         "py-markupsafe",
+        "py-matplotlib",
         "py-networkx",
         "py-numpy",
         "py-owslib",
@@ -200,6 +213,7 @@
           ]
         },
         "py-pysal",
+        "py-pysfcgal",
         "py-pytz",
         "py-pyyaml",
         "py-qscintilla",
@@ -225,6 +239,7 @@
           "name": "gdal",
           "default-features": true,
           "features": [
+            "archive",
             "arrow-adbc",
             "kea",
             "parquet",
@@ -270,6 +285,12 @@
         "qwt"
       ]
     },
+    "hana": {
+      "description": "Build with SAP HANA Spatial support",
+      "dependencies": [
+        "odbccpp"
+      ]
+    },
     "opencl": {
       "description": "Should OpenCL support be added",
       "dependencies": [
@@ -310,6 +331,18 @@
       "description": "Build with SFCGAL support",
       "dependencies": [
         "sfcgal"
+      ]
+    },
+    "tracy": {
+      "description": "Add Tracy profiler client support",
+      "dependencies": [
+        {
+          "name": "tracy",
+          "features": [
+            "fibers",
+            "on-demand"
+          ]
+        }
       ]
     }
   }

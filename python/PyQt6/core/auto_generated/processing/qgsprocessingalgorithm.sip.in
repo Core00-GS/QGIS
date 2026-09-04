@@ -171,6 +171,14 @@ The default is to return no flags.
 .. versionadded:: 3.40
 %End
 
+    virtual QList<QgsAcademicReference> academicReferences() const;
+%Docstring
+Returns the list of academic references describing the logic and
+processes used by the algorithm.
+
+.. versionadded:: 4.4
+%End
+
     virtual QIcon icon() const /HoldGIL/;
 %Docstring
 Returns an icon for the algorithm.
@@ -463,7 +471,7 @@ indicate whether the run was successful. The algorithm's
 be called when ``runResult`` is ``True``.
 %End
 
-    virtual QWidget *createCustomParametersWidget( QWidget *parent = 0 ) const /Factory/;
+    virtual QWidget *createCustomParametersWidget( QMainWindow *parent = 0 ) const /Factory/;
 %Docstring
 If an algorithm subclass implements a custom parameters widget, a copy
 of this widget should be constructed and returned by this method. The

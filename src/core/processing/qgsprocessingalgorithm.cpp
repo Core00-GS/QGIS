@@ -19,6 +19,7 @@
 
 #include <memory>
 
+#include "qgsacademicreference.h"
 #include "qgsapplication.h"
 #include "qgsexception.h"
 #include "qgsexpressioncontextutils.h"
@@ -88,6 +89,11 @@ QString QgsProcessingAlgorithm::helpUrl() const
 Qgis::ProcessingAlgorithmDocumentationFlags QgsProcessingAlgorithm::documentationFlags() const
 {
   return Qgis::ProcessingAlgorithmDocumentationFlags();
+}
+
+QList<QgsAcademicReference> QgsProcessingAlgorithm::academicReferences() const
+{
+  return {};
 }
 
 QIcon QgsProcessingAlgorithm::icon() const
@@ -170,7 +176,7 @@ void QgsProcessingAlgorithm::setProvider( QgsProcessingProvider *provider )
   }
 }
 
-QWidget *QgsProcessingAlgorithm::createCustomParametersWidget( QWidget * ) const
+QWidget *QgsProcessingAlgorithm::createCustomParametersWidget( QMainWindow * ) const
 {
   return nullptr;
 }
@@ -1257,6 +1263,10 @@ QVariantMap QgsProcessingFeatureBasedAlgorithm::processAlgorithm( const QVariant
       {
         throw QgsProcessingException( writeFeatureError( sink.get(), parameters, QString() ) );
       }
+      else
+      {
+        feedback->featureAddedToSink( u"OUTPUT"_s );
+      }
     }
 
     feedback->setProgress( current * step );
@@ -1264,6 +1274,7 @@ QVariantMap QgsProcessingFeatureBasedAlgorithm::processAlgorithm( const QVariant
   }
 
   sink->finalize();
+  feedback->featureSinkFinalized( u"OUTPUT"_s );
 
   mSource.reset();
 

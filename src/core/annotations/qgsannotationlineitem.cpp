@@ -85,8 +85,7 @@ bool QgsAnnotationLineItem::writeXml( QDomElement &element, QDomDocument &docume
 QList<QgsAnnotationItemNode> QgsAnnotationLineItem::nodesV2( const QgsAnnotationItemEditContext & ) const
 {
   QList< QgsAnnotationItemNode > res;
-  int i = 0;
-  for ( auto it = mCurve->vertices_begin(); it != mCurve->vertices_end(); ++it, ++i )
+  for ( auto it = mCurve->vertices_begin(); it != mCurve->vertices_end(); ++it )
   {
     res.append( QgsAnnotationItemNode( it.vertexId(), QgsPointXY( ( *it ).x(), ( *it ).y() ), Qgis::AnnotationItemNodeType::VertexHandle ) );
   }
@@ -143,6 +142,9 @@ Qgis::AnnotationItemEditOperationResult QgsAnnotationLineItem::applyEditV2( QgsA
       mCurve->transform( transform );
       return Qgis::AnnotationItemEditOperationResult::Success;
     }
+
+    case QgsAbstractAnnotationItemEditOperation::Type::SetItemBounds:
+      break;
   }
 
   return Qgis::AnnotationItemEditOperationResult::Invalid;
@@ -184,6 +186,7 @@ QgsAnnotationItemEditOperationTransientResults *QgsAnnotationLineItem::transient
       return new QgsAnnotationItemEditOperationTransientResults( QgsGeometry( std::move( modifiedCurve ) ) );
     }
 
+    case QgsAbstractAnnotationItemEditOperation::Type::SetItemBounds:
     case QgsAbstractAnnotationItemEditOperation::Type::DeleteNode:
     case QgsAbstractAnnotationItemEditOperation::Type::AddNode:
       break;
